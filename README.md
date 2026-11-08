@@ -144,6 +144,13 @@ disposable localhost shop, synthetic keys and disabled mail. Official Cloudflare
 dummy-key network checks are a separate `fixture.php provider` step. See
 [qualification evidence](docs/verification.md) for completed checks and limits.
 
+Release verification:42 settings cases,46 component checks,14 guard mutations,
+248 native lifecycle/render assertions,12 transaction/cache,11 SDK,16 authenticated
+MCP and123 HTTP checks passed. Exact CI/staging parity and95 staged assertions
+across13 languages passed. Official dummy keys and SimpleWithdrawal2.6.1 passed
+separate synthetic checks. Browser reflow and keyboard focus passed; true200%
+zoom and full accessibility remain unverified.
+
 The current staging theme remains held for separate migration. Enabling protection
 without a widget can block a form; this release does not alter held theme files.
 No production deployment or real-key challenge acceptance is implied by the port.
