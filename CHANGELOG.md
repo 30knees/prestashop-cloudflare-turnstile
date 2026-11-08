@@ -9,6 +9,7 @@ Drops support for PrestaShop 8.x and PHP below 8.5; requires PrestaShop 9.2.x an
 - Save validated settings atomically; retain a blank secret input and never echo the configured secret.
 - Require a strict successful provider response; reject malformed/oversized tokens and sanitize transport failures.
 - Escape widget attributes, render each widget's current options and restrict error redirects to the shop origin.
+- Associate every settings label with its native control.
 - Add read-only current-shop MCP status without keys, tokens, provider requests or writes.
 - Add exact package, component, guard mutation, native lifecycle, HTTP and MCP qualification suites.
 

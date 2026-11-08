@@ -27,7 +27,7 @@ class Forms(HTMLParser):
     def handle_starttag(self,tag,attrs):
         a=dict(attrs)
         if tag=='label' and a.get('for'): self.labels.add(a['for'])
-        if tag=='input' and a.get('name','').startswith('CLOUDFLARE_TURNSTILE_'): self.inputs[a['name']]=a
+        if tag in ('input','select') and a.get('name','').startswith('CLOUDFLARE_TURNSTILE_'): self.inputs[a['name']]=a
         if tag=='select' and '_language_' in a.get('id',''): self.language_selects.append(a)
         if tag=='base' and 'href' in a: self.base=a['href']
         if tag=='a' and 'href' in a: self.links.append(a['href'])
@@ -101,6 +101,8 @@ check(len(original)==6,'six settings fields')
 check(original['CLOUDFLARE_TURNSTILE_SECRET_KEY']=='','stored secret is never rendered')
 check('synthetic-secret-retain' not in page,'no stored secret in HTML')
 check('turnstile_form_token' in form['fields'],'independent form body token')
+parsed=Forms(page)
+check(len(parsed.inputs)==6 and all(a.get('id') in parsed.labels for a in parsed.inputs.values()),'six controls have associated labels')
 check(urllib.parse.urlsplit(legacy).netloc=='localhost:19105','native absolute form action')
 other=Client(); other_page,_=login(other)
 other_token=settings(other_page)['fields']['turnstile_form_token']

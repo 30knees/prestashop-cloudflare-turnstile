@@ -121,7 +121,7 @@ namespace {
 
     class HelperForm
     {
-        public $table, $name_controller, $token, $currentIndex, $submit_action, $default_form_language;
+        public $table, $name_controller, $token, $currentIndex, $submit_action, $default_form_language, $module;
         public $fields_value = [];
         public static $last;
         public function generateForm($forms)

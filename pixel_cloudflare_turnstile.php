@@ -861,6 +861,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         ];
 
         $helper = new HelperForm();
+        $helper->module = $this;
 
         $helper->table = $this->table;
         $helper->name_controller = $this->name;
