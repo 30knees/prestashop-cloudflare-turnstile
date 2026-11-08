@@ -743,7 +743,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $message .= '<br /><strong>- Login:</strong> themes/' . $themeName . '/templates/customer/_partials/login-form.tpl';
         $message .= '<br /><strong>- Reset password:</strong> themes/' . $themeName . '/templates/customer/password-email.tpl';
 
-        $output = '<div class="alert alert-info">' . $message . '</div>';
+        $output = '<div class="alert alert-info" style="overflow-wrap:anywhere">' . $message . '</div>';
 
         if (Tools::isSubmit('submit' . $this->name)) {
             if (!$this->isSettingsWriteAllowed()) {

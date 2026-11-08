@@ -45,6 +45,7 @@ try:
     fixture('upgrade'); fixture('status'); fixture('hooks-preserved'); fixture('preserved')
     fixture('disable'); fixture('reset'); fixture('status'); fixture('preserved')
     fixture('render')
+    php('native-atomic','/module/tests/native/atomic.php')
     php('native-scope','/module/tests/native/scope.php')
     php('mcp-setup','/module/tests/native/mcp-setup.php')
     run('mcp-http',[docker,'exec','-u','www-data','-e','TURNSTILE_TEST_SHOP=1','-e','TURNSTILE_MCP_HOST=localhost:19105','-w','/var/www/html',container,'php','/module/tests/native/mcp.php'])
