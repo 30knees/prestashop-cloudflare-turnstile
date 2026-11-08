@@ -1,8 +1,7 @@
 # Prestashop Cloudflare Turnstile
 
-[![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%207.2-green)](https://php.net/)
-[![Minimum Prestashop Version](https://img.shields.io/badge/prestashop-%3E%3D%201.7.7.0-green)](https://www.prestashop.com)
-[![GitHub release](https://img.shields.io/github/v/release/Pixel-Open/prestashop-cloudflare-turnstile)](https://github.com/Pixel-Open/prestashop-cloudflare-turnstile/releases)
+Maintained PS9 fork by 30knees, based on Pixel Open 1.1.7. Vendor history and
+license remain intact on `upstream`; maintained changes live on `main`.
 
 ## Presentation
 
@@ -19,12 +18,14 @@
 
 ## Requirements
 
-- Prestashop >= 1.7.7.0
-- PHP >= 7.2.0
+Drops support for PrestaShop 8.x and PHP below 8.5; requires PrestaShop 9.2.x and PHP 8.5.
+
+Install and native upgrade reject unsupported platforms before lifecycle writes.
 
 ## Installation
 
-Download the **pixel_cloudflare_turnstile.zip** file from the [last release](https://github.com/Pixel-Open/prestashop-cloudflare-turnstile/releases/latest) assets.
+Build the versioned **pixel_cloudflare_turnstile-1.2.0.zip** with `python tools/build.py`
+from committed source. The manifest records every packaged file and ZIP SHA-256.
 
 ### Admin
 
@@ -115,23 +116,34 @@ Use the **Test mode** option in the module configuration to test without real Cl
 
 This automatically uses Cloudflare's official test keys, so you don't need to manually change your sitekey and secret key.
 
-## Configuration regression tests
+## Release 1.2.0
 
-Run `php tests/settings.php` from this repository. The isolated tests exercise
-validation, failed writes, POST/configure-permission guards and URL generation
-with in-memory framework doubles; they do not load a shop or contact Cloudflare.
-An optional first argument selects another module PHP file for baseline checks.
+The port preserves configuration and credentials across upgrades, Reset and
+uninstall/reinstall. Remove retained credentials explicitly through shop
+configuration management if permanently retiring this module.
 
-The settings changes preserve the existing platform requirements. The suite was
-run on PHP 8.5.12, and the configuration form was rendered in a PrestaShop 9.2.0
-CLI component context. Native authenticated HTTP saves, installation/upgrades,
-real Cloudflare challenges and browser/accessibility checks remain separate
-integration checks. A failed storage operation can leave earlier fields saved;
-the error explicitly instructs the administrator to reload before retrying.
+Settings require native and session-bound CSRF checks, configure permission and
+one active shop. All fields validate before a transaction; a failed write rolls
+back and clears the configuration cache. The secret input always stays empty;
+leave it blank to keep the current key. The settings heading reads the installed
+version from module metadata.
 
-### MCP integration assessment
+Provider validation accepts only HTTP 200 with a JSON boolean `success: true`.
+Malformed tokens/replies fail closed without leaking transport diagnostics.
+Widget attributes are escaped and each render uses its current options. Error
+redirects stay on the shop origin.
 
-These settings corrections introduce no new agent operation. Existing shop
-module administration and Cloudflare's own management interfaces remain the
-appropriate surfaces; this contribution does not add a module-specific MCP
-endpoint or expose configured keys. No MCP transport qualification is claimed.
+`turnstile://status` is a read-only MCP resource for the current active shop. It
+reports installed/code versions, protected forms, test mode, credential presence
+and hook registration. It does not return keys, verify challenges, modify settings
+or certify theme placement. No custom write tool is exposed: secret rotation and
+form enablement remain in native settings with human review of widget placement.
+
+Run `bash .ci/run.sh`, then `python tests/run_ps92.py`. The native suite uses only a
+disposable localhost shop, synthetic keys and disabled mail. Official Cloudflare
+dummy-key network checks are a separate `fixture.php provider` step. See
+[qualification evidence](docs/verification.md) for completed checks and limits.
+
+The current staging theme remains held for separate migration. Enabling protection
+without a widget can block a form; this release does not alter held theme files.
+No production deployment or real-key challenge acceptance is implied by the port.

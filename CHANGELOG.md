@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 - 2026-11-08
+
+Drops support for PrestaShop 8.x and PHP below 8.5; requires PrestaShop 9.2.x and PHP 8.5.
+
+- Preserve all configuration scopes and credentials during Reset, upgrade and uninstall/reinstall.
+- Require native CSRF validation, an independent session-bound form token, a logged-in authorized employee and one active shop.
+- Save validated settings atomically; retain a blank secret input and never echo the configured secret.
+- Require a strict successful provider response; reject malformed/oversized tokens and sanitize transport failures.
+- Escape widget attributes, render each widget's current options and restrict error redirects to the shop origin.
+- Add read-only current-shop MCP status without keys, tokens, provider requests or writes.
+- Add exact package, component, guard mutation, native lifecycle, HTTP and MCP qualification suites.
+
+## Earlier settings contribution (upstream PR 20)
 
 - Validate every configuration field before saving; reject invalid selection values and malformed input.
 - Report failed configuration writes without a success message and explain partial persistence.

@@ -1,0 +1,33 @@
+name: Module checks
+on: [push, pull_request]
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: curl, dom, intl, mbstring, pdo_mysql, zip
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: PHP8.5 regressions, guard mutations and canonical ZIP
+        run: bash .ci/run.sh
+      - name: Unsupported PHP and removal of runtime guard
+        run: docker run --rm -v "$PWD:/module:ro" -w /module php:8.2-cli sh -c 'php tests/runtime.php && php tests/mutations.php'
+      - name: Native lifecycle, settings HTTP and authenticated MCP
+        run: python3 tests/run_ps92.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pixel_cloudflare_turnstile-1.2.0-qualification
+          include-hidden-files: true
+          path: |
+            dist/*
+            .qualification/*.log

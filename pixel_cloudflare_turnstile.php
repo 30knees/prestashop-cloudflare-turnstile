@@ -62,8 +62,8 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function __construct()
     {
         $this->name = 'pixel_cloudflare_turnstile';
-        $this->version = '1.1.7';
-        $this->author = 'Pixel Open';
+        $this->version = '1.2.0';
+        $this->author = '30knees';
         $this->tab = 'front_office_features';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -81,8 +81,8 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             'Modules.Pixelcloudflareturnstile.Admin'
         );
         $this->ps_versions_compliancy = [
-            'min' => '1.7.6.0',
-            'max' => _PS_VERSION_,
+            'min' => '9.2.0',
+            'max' => '9.2.99',
         ];
 
         $this->templateFile = 'module:' . $this->name . '/pixel_cloudflare_turnstile.tpl';
@@ -99,22 +99,39 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
      */
     public function install(): bool
     {
-        return parent::install() &&
-            $this->registerHook('actionFrontControllerSetMedia') &&
-            $this->registerHook('displayCustomerAccountForm') &&
-            $this->registerHook('displayNewsletterRegistration') &&
-            $this->registerHook('actionNewsletterRegistrationBefore') &&
-            $this->registerHook('actionFrontControllerInitBefore');
+        if (!$this->checkRuntime()) return false;
+        if (!parent::install()) return false;
+        if (!$this->registerHook([
+            'actionFrontControllerSetMedia', 'displayCustomerAccountForm',
+            'displayNewsletterRegistration', 'actionNewsletterRegistrationBefore',
+            'actionFrontControllerInitBefore',
+        ])) {
+            parent::uninstall();
+            return false;
+        }
+        return true;
     }
 
-    /**
-     * Uninstall the module
-     *
-     * @return bool
-     */
     public function uninstall(): bool
     {
-        return parent::uninstall() && $this->deleteConfigurations();
+        // Reset uses uninstall/install; keep every configuration scope and credential.
+        return parent::uninstall();
+    }
+
+    public function checkRuntime(): bool
+    {
+        if (PHP_VERSION_ID < 80500 || PHP_VERSION_ID >= 80600
+            || version_compare(_PS_VERSION_, '9.2.0', '<') || version_compare(_PS_VERSION_, '9.2.99', '>')) {
+            $this->_errors[] = 'Requires PrestaShop 9.2.x and PHP 8.5.';
+            return false;
+        }
+        return true;
+    }
+
+    public function runUpgradeModule()
+    {
+        if (!$this->checkRuntime()) throw new PrestaShopException('Requires PrestaShop 9.2.x and PHP 8.5.');
+        return parent::runUpgradeModule();
     }
 
     /**
@@ -351,7 +368,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public static function turnstileValidationAndRedirect(): void
     {
         if (!self::turnstileValidation()) {
-            $referer = $_SERVER['HTTP_REFERER'] ?? 'index';
+            $referer = self::returnUrl();
 
             if (!empty(static::$validationError)) {
                 $cookie  = Context::getContext()->cookie;
@@ -365,6 +382,23 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         }
     }
 
+    protected static function returnUrl(): string
+    {
+        $fallback = Context::getContext()->link->getPageLink('index');
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $target = is_string($referer) ? parse_url($referer) : false;
+        $origin = parse_url($fallback);
+        if (!is_array($target) || preg_match('/[\x00-\x20\\\\]/', $referer)
+            || !in_array($target['scheme'] ?? '', ['http', 'https'], true)
+            || isset($target['user']) || isset($target['pass'])
+            || strtolower($target['host'] ?? '') !== strtolower($origin['host'] ?? '')
+            || ($target['scheme'] ?? '') !== ($origin['scheme'] ?? '')
+            || ($target['port'] ?? null) !== ($origin['port'] ?? null)) {
+            return $fallback;
+        }
+        return $referer;
+    }
+
     /**
      * Validate turnstile
      *
@@ -373,8 +407,9 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
      */
     public static function turnstileValidation(): bool
     {
+        static::$validationError = null;
         $response = Tools::getValue('cf-turnstile-response');
-        if (!$response) {
+        if (!is_string($response) || $response === '' || strlen($response) > 2048) {
             static::$validationError =
                 Context::getContext()->getTranslator()->trans(
                     'Please validate the security field.',
@@ -386,8 +421,13 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             return false;
         }
 
+        $secret = self::getSecretKeyStatic();
+        if (!$secret) {
+            static::$validationError = 'Security validation is unavailable. Please try again later.';
+            return false;
+        }
         $data = [
-            'secret'   => self::getSecretKeyStatic(),
+            'secret'   => $secret,
             'response' => $response,
         ];
 
@@ -400,18 +440,18 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         curl_setopt($ch, CURLOPT_TIMEOUT, 3);
 
         $curlResult = curl_exec($ch);
-        if (!$curlResult) {
-            static::$validationError ='Curl error: ' . curl_error($ch);
+        if (!is_string($curlResult) || curl_getinfo($ch, CURLINFO_HTTP_CODE) !== 200) {
+            static::$validationError = 'Security validation is unavailable. Please try again later.';
 
             return false;
         }
 
         $result = json_decode($curlResult, true);
 
-        if (!($result['success'] ?? false)) {
-            $errors = $result['error-codes'] ?? ['unavailable'];
+        if (!is_array($result) || ($result['success'] ?? null) !== true) {
+            $errors = is_array($result['error-codes'] ?? null) ? $result['error-codes'] : ['unavailable'];
             foreach ($errors as $key => $errorCode) {
-                $errors[$key] = self::getErrorMessage($errorCode);
+                $errors[$key] = is_string($errorCode) ? self::getErrorMessage($errorCode) : self::getErrorMessage('unavailable');
             }
             static::$validationError =
                 Context::getContext()->getTranslator()->trans(
@@ -469,13 +509,8 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         if (!$isCustom && (!$this->canProcess($className) && $hookName != 'displayNewsletterRegistration')) {
             return '';
         }
-        $keys = [$this->name, $className, $this->getFormName()];
-        $cacheId = join('_', $keys);
-        if (!$this->isCached($this->templateFile, $this->getCacheId($cacheId))) {
-            $this->smarty->assign($this->getWidgetVariables($hookName, $configuration));
-        }
-
-        return $this->fetch($this->templateFile, $this->getCacheId($cacheId));
+        $this->smarty->assign($this->getWidgetVariables($hookName, $configuration));
+        return $this->fetch($this->templateFile);
     }
 
     /**
@@ -489,11 +524,20 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function getWidgetVariables($hookName, array $configuration): array
     {
         $action = $configuration['action'] ?? $this->getFormName();
+        if (!is_string($action) || !preg_match('/\A[a-zA-Z0-9_-]{1,32}\z/D', $action)) {
+            throw new InvalidArgumentException('Invalid Turnstile action.');
+        }
+        $theme = $configuration['theme'] ?? $this->getTheme();
+        $appearance = $configuration['appearance'] ?? $this->getAppearance();
+        if (!in_array($theme, ['auto', 'light', 'dark'], true)
+            || !in_array($appearance, ['always', 'execute', 'interaction-only'], true)) {
+            throw new InvalidArgumentException('Invalid Turnstile widget options.');
+        }
         return [
             'sitekey'    => $this->getSitekey(),
-            'theme'      => $configuration['theme'] ?? $this->getTheme(),
-            'appearance' => $configuration['appearance'] ?? $this->getAppearance(),
-            'action'     => substr($action, 0, 32), // This can only contain up to 32 alphanumeric characters including _ and -
+            'theme'      => $theme,
+            'appearance' => $appearance,
+            'action'     => $action,
         ];
     }
 
@@ -541,10 +585,11 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 'required' => true,
             ],
             self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY => [
-                'type'     => 'text',
+                'type'     => 'password',
                 'label'    => $this->trans('Secret key', [], 'Modules.Pixelcloudflareturnstile.Admin'),
                 'name'     => self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY,
-                'required' => true,
+                'required' => false,
+                'desc' => 'Leave blank to keep the configured secret key.',
             ],
             self::CONFIG_CLOUDFLARE_TURNSTILE_THEME => [
                 'type'     => 'select',
@@ -676,7 +721,10 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
      */
     public function getContent(): string
     {
-        $themeName = $this->getCurrentThemeName();
+        if (!$this->canConfigureSettings()) {
+            return $this->displayError('You cannot configure these settings.');
+        }
+        $themeName = htmlspecialchars($this->getCurrentThemeName(), ENT_QUOTES, 'UTF-8');
 
         $message = $this->trans(
             'For contact, login and reset password forms, you need to manually add the widget in the template files.',
@@ -691,7 +739,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $output = '<div class="alert alert-info">' . $message . '</div>';
 
         if (Tools::isSubmit('submit' . $this->name)) {
-            if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !$this->getPermission('configure')) {
+            if (!$this->isSettingsWriteAllowed()) {
                 return $this->displayError(
                     $this->trans('You cannot save these settings.', [], 'Modules.Pixelcloudflareturnstile.Admin')
                 ) . $this->displayForm();
@@ -700,7 +748,10 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             // Validate every field before changing any stored configuration.
             $values = [];
             foreach ($this->getConfigFields() as $code => $field) {
-                $value = Tools::getValue($code);
+                $value = $_POST[$code] ?? false;
+                if ($code === self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY && $value === '') {
+                    $value = Configuration::get($code);
+                }
                 $multiple = ($field['multiple'] ?? false) === true;
                 $allowed = isset($field['options']) ? array_column($field['options']['query'], 'value') : [];
                 if ($multiple && $value === false) {
@@ -722,7 +773,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                     }
                 } else {
                     $valid = is_string($value);
-                    if ($valid && $field['required'] && trim($value) === '') {
+                    if ($valid && ($field['required'] || $code === self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY) && (trim($value) === '' || strlen($value) > 2048)) {
                         $valid = false;
                     }
                     if ($valid && $allowed && !in_array($value, $allowed, true)) {
@@ -742,16 +793,21 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 $values[$code] = $multiple ? join(',', $value) : $value;
             }
 
+            $db = Db::getInstance();
+            if (!$db->execute('START TRANSACTION')) return $this->displayError('Settings could not be saved.') . $this->displayForm();
             try {
                 foreach ($values as $code => $value) {
                     if (!Configuration::updateValue($code, $value)) {
                         throw new \RuntimeException('Configuration update failed');
                     }
                 }
+                if (!$db->execute('COMMIT')) throw new RuntimeException('Commit failed');
             } catch (\Throwable $error) {
+                $db->execute('ROLLBACK');
+                Configuration::resetStaticCache();
                 return $this->displayError(
                     $this->trans(
-                        'Some settings could not be saved. Reload this page to check the stored values before retrying.',
+                        'Settings were not saved. Reload this page before retrying.',
                         [],
                         'Modules.Pixelcloudflareturnstile.Admin'
                     )
@@ -787,9 +843,9 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $form = [
             'form' => [
                 'legend' => [
-                    'title' => $this->trans('Settings', [], 'Modules.Pixelcloudflareturnstile.Admin') . ' (' . $this->version . ')',
+                    'title' => $this->trans('Settings', [], 'Modules.Pixelcloudflareturnstile.Admin') . ' (' . $this->installedVersion() . ')',
                 ],
-                'input' => $this->getConfigFields(),
+                'input' => array_merge(array_values($this->getConfigFields()), [['type' => 'hidden', 'name' => 'turnstile_form_token']]),
                 'submit' => [
                     'title' => $this->trans('Save', [], 'Modules.Pixelcloudflareturnstile.Admin'),
                     'class' => 'btn btn-default pull-right',
@@ -806,6 +862,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $helper->submit_action = 'submit' . $this->name;
 
         $helper->default_form_language = (int) Configuration::get('PS_LANG_DEFAULT');
+        $helper->fields_value['turnstile_form_token'] = $this->settingsFormToken();
 
         foreach ($this->getConfigFields() as $code => $field) {
             $value = Tools::getValue($code, Configuration::get($code));
@@ -817,7 +874,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             } elseif (!is_string($value)) {
                 $value = '';
             }
-            $helper->fields_value[$field['name']] = $value;
+            $helper->fields_value[$field['name']] = $code === self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY ? '' : $value;
         }
 
         return $helper->generateForm([$form]);
@@ -865,7 +922,8 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
      */
     public function getTestMode(): string
     {
-        return Configuration::get(self::CONFIG_CLOUDFLARE_TURNSTILE_TEST_MODE) ?: self::TEST_MODE_DISABLED;
+        $mode = Configuration::get(self::CONFIG_CLOUDFLARE_TURNSTILE_TEST_MODE) ?: self::TEST_MODE_DISABLED;
+        return is_string($mode) && isset(self::TEST_KEYS[$mode]) ? $mode : self::TEST_MODE_DISABLED;
     }
 
     /**
@@ -886,7 +944,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     protected static function getSecretKeyStatic(): ?string
     {
         $testMode = Configuration::get(self::CONFIG_CLOUDFLARE_TURNSTILE_TEST_MODE) ?: self::TEST_MODE_DISABLED;
-        if ($testMode !== self::TEST_MODE_DISABLED) {
+        if (is_string($testMode) && isset(self::TEST_KEYS[$testMode])) {
             return self::TEST_KEYS[$testMode]['secret'];
         }
         return Configuration::get(self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY) ?: null;
@@ -907,17 +965,84 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         return Configuration::get(self::CONFIG_CLOUDFLARE_TURNSTILE_SITEKEY) ?: null;
     }
 
-    /**
-     * Delete configurations
-     *
-     * @return bool
-     */
-    protected function deleteConfigurations(): bool
-    {
-        foreach ($this->getConfigFields() as $key => $options) {
-            Configuration::deleteByName($key);
-        }
 
+    public function canConfigureSettings(): bool
+    {
+        $employee = $this->context->employee ?? null;
+        $shop = $this->context->shop ?? null;
+        return $employee instanceof Employee && Validate::isLoadedObject($employee)
+            && $employee->active && $employee->isLoggedBack()
+            && $this->getPermission('configure', $employee)
+            && Shop::getContext() === Shop::CONTEXT_SHOP && $shop instanceof Shop
+            && Validate::isLoadedObject($shop) && $shop->active && !$shop->deleted
+            && (int) Shop::getContextShopID() === (int) $shop->id
+            && $employee->hasAuthOnShop((int) $shop->id);
+    }
+
+    public function settingsFormToken(): string
+    {
+        $container = PrestaShop\PrestaShop\Adapter\SymfonyContainer::getInstance();
+        $session = $container->get('request_stack')->getSession();
+        $key = 'turnstile_settings_' . (int) $this->context->employee->id;
+        if (!$session->has($key)) $session->set($key, bin2hex(random_bytes(32)));
+        return (string) $session->get($key);
+    }
+
+    public function isSettingsWriteAllowed(): bool
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !$this->canConfigureSettings()) return false;
+        try {
+            $container = PrestaShop\PrestaShop\Adapter\SymfonyContainer::getInstance();
+            $token = $_POST['turnstile_form_token'] ?? null;
+            return $container->get(PrestaShopBundle\Security\Admin\UserTokenManager::class)->isTokenValid()
+                && is_string($token) && hash_equals($this->settingsFormToken(), $token);
+        } catch (Throwable $error) { return false; }
+    }
+
+    private function installedVersion(): string
+    {
+        $version = Db::getInstance()->getValue("SELECT version FROM `" . _DB_PREFIX_ . "module` WHERE name='pixel_cloudflare_turnstile'", false);
+        return htmlspecialchars($version === false ? 'Unavailable' : (string) $version, ENT_QUOTES, 'UTF-8');
+    }
+
+    public function isMcpCompliant(): bool
+    {
         return true;
     }
+
+    /** Diagnostic only: never returns key material or contacts Cloudflare. */
+    public function getStatus(): array
+    {
+        $shop = Context::getContext()->shop ?? null;
+        if (Shop::getContext() !== Shop::CONTEXT_SHOP || !$shop instanceof Shop
+            || !Validate::isLoadedObject($shop) || !$shop->active || $shop->deleted
+            || (int) $shop->id <= 0 || (int) Shop::getContextShopID() !== (int) $shop->id) {
+            throw new DomainException('Select one active shop to read Turnstile status.');
+        }
+        $db = Db::getInstance();
+        $row = $db->getRow('SELECT m.version FROM `' . _DB_PREFIX_ . 'module` m'
+            . ' INNER JOIN `' . _DB_PREFIX_ . 'module_shop` ms ON ms.id_module=m.id_module'
+            . " WHERE m.name='pixel_cloudflare_turnstile' AND m.active=1 AND ms.id_shop=" . (int) $shop->id, false);
+        if ((int) $db->getNumberError() !== 0) throw new RuntimeException('Unable to read installation status.');
+        if (!is_array($row) || !isset($row['version'])) throw new DomainException('Turnstile is not enabled for this shop.');
+        $hooks = [];
+        foreach (['actionFrontControllerSetMedia', 'displayCustomerAccountForm', 'displayNewsletterRegistration',
+            'actionNewsletterRegistrationBefore', 'actionFrontControllerInitBefore'] as $hook) {
+            $hooks[$hook] = $this->isRegisteredInHook($hook);
+        }
+        return [
+            'shop_id' => (int) $shop->id,
+            'installed_version' => (string) $row['version'],
+            'code_version' => $this->version,
+            'forms' => array_values(array_intersect($this->getForms(), [self::FORM_CONTACT, self::FORM_LOGIN,
+                self::FORM_REGISTER, self::FORM_PASSWORD, self::FORM_NEWSLETTER])),
+            'test_mode' => $this->getTestMode(),
+            'sitekey_configured' => (bool) Configuration::get(self::CONFIG_CLOUDFLARE_TURNSTILE_SITEKEY),
+            'secret_configured' => (bool) Configuration::get(self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY),
+            'hooks' => $hooks,
+            'note' => 'Contact, login and password templates need widget placement. This read does not test Cloudflare or validate theme placement.',
+        ];
+    }
 }
+
+require_once __DIR__ . '/src/Mcp/StatusResource.php';

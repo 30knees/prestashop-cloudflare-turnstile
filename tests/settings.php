@@ -4,13 +4,55 @@ namespace PrestaShop\PrestaShop\Core\Module {
     interface WidgetInterface {}
 }
 
+namespace PrestaShop\PrestaShop\Adapter {
+    class SymfonyContainer { public static function getInstance() { return new \TestContainer(); } }
+}
+namespace PrestaShopBundle\Security\Admin { class UserTokenManager {} }
+
 namespace {
+    class TestSession {
+        public static $data=[];
+        public function has($key) { return isset(self::$data[$key]); }
+        public function set($key,$value) { self::$data[$key]=$value; }
+        public function get($key) { return self::$data[$key]; }
+    }
+    class TestContainer {
+        public static bool $nativeValid=true;
+        public function get($key) { return $this; }
+        public function getSession() { return new TestSession(); }
+        public function isTokenValid() { return self::$nativeValid; }
+    }
+    class Employee {
+        public $id=1, $active=true, $logged=true, $shopAccess=true;
+        public function isLoggedBack() { return $this->logged; }
+        public function hasAuthOnShop($id) { return $this->shopAccess; }
+    }
+    class Shop {
+        public const CONTEXT_SHOP=1;
+        public static $scope=1, $contextId=1;
+        public $id=1, $active=true, $deleted=false;
+        public static function getContext() { return self::$scope; }
+        public static function getContextShopID() { return self::$contextId; }
+    }
+    class Validate { public static function isLoadedObject($object) { return is_object($object) && !empty($object->id); } }
+    class Db {
+        public static $snapshot=[], $failStart=false, $failCommit=false;
+        public static function getInstance() { return new self(); }
+        public function execute($sql) {
+            if($sql==='START TRANSACTION') { if(self::$failStart) return false; self::$snapshot=Configuration::$values; }
+            if($sql==='COMMIT' && self::$failCommit) return false;
+            if($sql==='ROLLBACK') Configuration::$values=self::$snapshot;
+            return true;
+        }
+        public function getValue($sql,$cache) { if($cache!==false) throw new \RuntimeException('Cached installed version'); return '1.1.4'; }
+    }
     if (PHP_SAPI !== 'cli') {
         http_response_code(404);
         exit;
     }
 
     define('_PS_VERSION_', '9.2.0');
+    define('_DB_PREFIX_','fixture_');
     error_reporting(E_ALL);
     set_error_handler(function ($severity, $message, $file, $line) {
         throw new \ErrorException($message, 0, $severity, $file, $line);
@@ -22,6 +64,8 @@ namespace {
         public static $writes = [];
         public static $failKey;
         public static $throwOnFailure = false;
+        public static $cacheResets = 0;
+        public static function resetStaticCache() { ++self::$cacheResets; }
 
         public static function get($key) { return self::$values[$key] ?? false; }
 
@@ -59,7 +103,7 @@ namespace {
     class Context
     {
         public static $instance;
-        public $link;
+        public $link, $employee, $shop;
         public static function getContext() { return self::$instance; }
     }
 
@@ -72,7 +116,7 @@ namespace {
         public function trans($text, $parameters = [], $domain = '') { return strtr($text, $parameters); }
         public function displayError($text) { return 'ERROR:' . $text; }
         public function displayConfirmation($text) { return 'SUCCESS:' . $text; }
-        public function getPermission($permission) { return $permission === 'configure' && self::$canConfigure; }
+        public function getPermission($permission, $employee=null) { return $permission === 'configure' && self::$canConfigure; }
     }
 
     class HelperForm
@@ -129,13 +173,17 @@ namespace {
         Configuration::$failKey = null;
         Configuration::$throwOnFailure = false;
         Module::$canConfigure = true;
+        TestContainer::$nativeValid=true; Shop::$scope=1; Shop::$contextId=1; Db::$failStart=false; Db::$failCommit=false; Configuration::$cacheResets=0;
+        TestSession::$data=['turnstile_settings_1'=>'synthetic-session-token'];
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $_GET = [];
         $_POST = defaults();
         $_POST['submitpixel_cloudflare_turnstile'] = '1';
+        $_POST['turnstile_form_token']='synthetic-session-token';
         $_POST['CLOUDFLARE_TURNSTILE_FORMS'] = ['contact', 'register'];
         Context::$instance = new Context();
         Context::$instance->link = new ReviewLink();
+        Context::$instance->employee=new Employee(); Context::$instance->shop=new Shop();
         return new ReviewTurnstile();
     }
 
@@ -143,7 +191,7 @@ namespace {
     $tests['invalid later field leaves all stored settings untouched'] = function () {
         $module = resetCase();
         $_POST['CLOUDFLARE_TURNSTILE_SITEKEY'] = 'changed-sitekey';
-        $_POST['CLOUDFLARE_TURNSTILE_SECRET_KEY'] = '';
+        $_POST['CLOUDFLARE_TURNSTILE_THEME'] = 'invalid';
         $html = $module->getContent();
         expect(strpos($html, 'ERROR:') !== false, 'validation error shown');
         expect(Configuration::$writes === [], 'invalid form must not write earlier fields');
@@ -187,11 +235,13 @@ namespace {
             $module = resetCase();
             Configuration::$failKey = 'CLOUDFLARE_TURNSTILE_SECRET_KEY';
             Configuration::$throwOnFailure = $throw;
+            $_POST['CLOUDFLARE_TURNSTILE_SITEKEY'] = 'must-roll-back';
             $html = $module->getContent();
             expect(strpos($html, 'ERROR:') !== false && strpos($html, 'SUCCESS:') === false, 'failure reported without success');
             expect(strpos($html, 'private database diagnostic') === false, 'exception detail not exposed');
             expect(count(Configuration::$writes) === 2, 'writes stop at failure');
-            expect(strpos($html, 'Reload') !== false, 'partial persistence instructions shown');
+            expect(strpos($html, 'Reload') !== false, 'retry instructions shown');
+            expect(Configuration::$values===defaults() && Configuration::$cacheResets===1,'Failed save rolls back values and native cache');
         };
     }
     $tests['GET cannot change settings'] = function () {
@@ -201,6 +251,10 @@ namespace {
         $_SERVER['REQUEST_METHOD'] = 'GET';
         $module->getContent();
         expect(Configuration::$writes === [], 'GET is read-only');
+    };
+    $tests['write authority requires POST even with valid body fields'] = function () {
+        $module=resetCase(); $_SERVER['REQUEST_METHOD']='GET';
+        expect(!$module->isSettingsWriteAllowed(),'GET method cannot authorize writes');
     };
     $tests['configure permission required for writes'] = function () {
         $module = resetCase();
@@ -214,7 +268,40 @@ namespace {
         $module->displayForm();
         expect(Context::$instance->link->params === ['configure' => 'pixel_cloudflare_turnstile'], 'native configure parameter supplied');
         expect(HelperForm::$last->currentIndex === '/native/configure/pixel_cloudflare_turnstile', 'no legacy concatenation');
+        expect(HelperForm::$last->fields_value['CLOUDFLARE_TURNSTILE_SECRET_KEY']==='', 'stored secret is never rendered on a fresh page');
     };
+
+    $tests['blank secret retains value and never redisplays it'] = function () {
+        $module=resetCase(); $_POST['CLOUDFLARE_TURNSTILE_SECRET_KEY']='';
+        expect(str_contains($module->getContent(),'SUCCESS:'),'Blank secret keeps configured credential');
+        expect(Configuration::$values['CLOUDFLARE_TURNSTILE_SECRET_KEY']==='synthetic-secret','Original secret retained');
+        expect(HelperForm::$last->fields_value['CLOUDFLARE_TURNSTILE_SECRET_KEY']==='','Secret never rendered');
+    };
+    foreach([
+        'invalid native token'=>fn()=>TestContainer::$nativeValid=false,
+        'missing body token'=>function() { unset($_POST['turnstile_form_token']); },
+        'array body token'=>fn()=>$_POST['turnstile_form_token']=[],
+        'wrong body token'=>fn()=>$_POST['turnstile_form_token']='other-session',
+        'inactive employee'=>fn()=>Context::$instance->employee->active=false,
+        'logged out employee'=>fn()=>Context::$instance->employee->logged=false,
+        'unassociated employee'=>fn()=>Context::$instance->employee->shopAccess=false,
+        'aggregate context'=>fn()=>Shop::$scope=0,
+        'mismatched context'=>fn()=>Shop::$contextId=2,
+        'inactive shop'=>fn()=>Context::$instance->shop->active=false,
+        'deleted shop'=>fn()=>Context::$instance->shop->deleted=true,
+    ] as $name=>$deny) {
+        $tests[$name.' refuses without writes']=function() use($deny) {
+            $module=resetCase(); $deny(); $html=$module->getContent();
+            expect(str_contains($html,'ERROR:') && Configuration::$writes===[] && Configuration::$values===defaults(),'Authority boundary');
+        };
+    }
+    foreach(['failStart','failCommit'] as $point) {
+        $tests[$point.' preserves settings']=function() use($point) {
+            $module=resetCase(); Db::${$point}=true; $_POST['CLOUDFLARE_TURNSTILE_SITEKEY']='changed';
+            expect(str_contains($module->getContent(),'ERROR:'),'Transaction error visible');
+            expect(Configuration::$values===defaults(),'Transaction failure preserves original values');
+        };
+    }
 
     $failed = 0;
     foreach ($tests as $name => $test) {
