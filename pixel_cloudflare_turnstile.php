@@ -579,7 +579,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
      */
     protected function getConfigFields(): array
     {
-        return [
+        $fields = [
             self::CONFIG_CLOUDFLARE_TURNSTILE_SITEKEY => [
                 'type'     => 'text',
                 'label'    => $this->trans('Sitekey', [], 'Modules.Pixelcloudflareturnstile.Admin'),
@@ -713,6 +713,11 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 ),
             ],
         ];
+        foreach ($fields as $code => &$field) {
+            $field['id'] = $code;
+        }
+        unset($field);
+        return $fields;
     }
 
     /**
