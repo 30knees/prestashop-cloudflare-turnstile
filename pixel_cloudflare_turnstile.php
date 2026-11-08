@@ -509,8 +509,10 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         if (!$isCustom && (!$this->canProcess($className) && $hookName != 'displayNewsletterRegistration')) {
             return '';
         }
-        $this->smarty->assign($this->getWidgetVariables($hookName, $configuration));
-        return $this->fetch($this->templateFile);
+        $template = $this->context->smarty->createTemplate($this->templateFile, null, $this->getDefaultCompileId(), $this->smarty);
+        $template->caching = Smarty::CACHING_OFF;
+        $template->assign($this->getWidgetVariables($hookName, $configuration));
+        return $template->fetch();
     }
 
     /**
