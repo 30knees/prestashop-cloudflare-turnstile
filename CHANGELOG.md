@@ -2,6 +2,9 @@
 
 ## 1.2.1 - 2026-11-17
 
+Production native upgrade verified at 09:11 UTC: 23 package hashes, preserved
+settings/credentials/hooks, 28 localized checks and public form GETs pass.
+
 - Translate invalid-field, permission and persistence errors and blank-secret guidance in the four bundled locales.
 - Preserve all settings behavior and existing translation keys; add native catalogue/HTTP regression coverage and the exact 1.2.0 upgrade fixture.
 

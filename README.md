@@ -118,6 +118,11 @@ This automatically uses Cloudflare's official test keys, so you don't need to ma
 
 ## Release 1.2.1
 
+Deployed to production on 17 November 2026 at 09:11 UTC after local, CI and
+staging qualification. Package hashes, settings preservation and all 28 native
+production translation checks pass; storefront and protected forms return 200.
+[Verification and remaining acceptance checks](docs/verification.md).
+
 - Translate the six maintained settings messages in German, Spanish, French and
   Italian, including invalid fields, save failures and secret-key retention help.
 - Keep validation, authorization, transaction handling, routing and provider

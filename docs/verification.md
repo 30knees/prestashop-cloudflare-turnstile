@@ -32,8 +32,17 @@ routes three previously literal messages through the native translator.
 - Not checked in this run: visual reflow, keyboard/200%zoom (browser access host
   unavailable), native-speaker wording, public staging MCP transport or real-key
   Cloudflare challenges. Earlier browser evidence does not verify the new strings.
-- Production: not deployed by this task. Publishing and staging qualification
-  are separate from production delivery. Older dated records below are historical.
+- Production: owner-authorized native 1.2.0-to-1.2.1 upgrade completed on
+  17 November at 09:11 UTC, on PrestaShop 9.2.1 / PHP 8.5.12. All 23 package
+  hashes, 15 supplemental files, four settings rows/credentials, five hooks and
+  shop association verified; policy and neighboring module versions unchanged.
+  A scoped private host recovery set was verified before replacement. All 28
+  native translation/denied-render checks pass on production, along with direct
+  SDK/status reads. Public storefront/contact/registration GETs return 200, both
+  protected forms include the widget, and public CSS matches the release manifest.
+  No settings save or provider challenge was submitted. Visual/native-speaker
+  and authenticated production MCP acceptance remain separate. Older records
+  below describe their dated historical state.
 
 ## Turnstile 1.2.0 qualification - 8 November 2026
 
