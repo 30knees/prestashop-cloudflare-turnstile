@@ -2,3 +2,5 @@
 
 /dist/
 /.qualification/
+
+__pycache__/
