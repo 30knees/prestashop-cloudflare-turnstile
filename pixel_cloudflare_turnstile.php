@@ -62,7 +62,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function __construct()
     {
         $this->name = 'pixel_cloudflare_turnstile';
-        $this->version = '1.2.0';
+        $this->version = '1.2.1';
         $this->author = '30knees';
         $this->tab = 'front_office_features';
         $this->need_instance = 0;
@@ -591,7 +591,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 'label'    => $this->trans('Secret key', [], 'Modules.Pixelcloudflareturnstile.Admin'),
                 'name'     => self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY,
                 'required' => false,
-                'desc' => 'Leave blank to keep the configured secret key.',
+                'desc' => $this->trans('Leave blank to keep the configured secret key.', [], 'Modules.Pixelcloudflareturnstile.Admin'),
             ],
             self::CONFIG_CLOUDFLARE_TURNSTILE_THEME => [
                 'type'     => 'select',
@@ -729,7 +729,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function getContent(): string
     {
         if (!$this->canConfigureSettings()) {
-            return $this->displayError('You cannot configure these settings.');
+            return $this->displayError($this->trans('You cannot configure these settings.', [], 'Modules.Pixelcloudflareturnstile.Admin'));
         }
         $themeName = htmlspecialchars($this->getCurrentThemeName(), ENT_QUOTES, 'UTF-8');
 
@@ -801,7 +801,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             }
 
             $db = Db::getInstance();
-            if (!$db->execute('START TRANSACTION')) return $this->displayError('Settings could not be saved.') . $this->displayForm();
+            if (!$db->execute('START TRANSACTION')) return $this->displayError($this->trans('Settings could not be saved.', [], 'Modules.Pixelcloudflareturnstile.Admin')) . $this->displayForm();
             try {
                 foreach ($values as $code => $value) {
                     if (!Configuration::updateValue($code, $value)) {

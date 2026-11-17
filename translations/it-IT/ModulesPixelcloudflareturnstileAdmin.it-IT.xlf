@@ -132,6 +132,30 @@
         <target>Usa chiavi di test Cloudflare invece di chiavi reali</target>
         <note>Line: </note>
       </trans-unit>
+      <trans-unit id="settings_secret_help">
+        <source>Leave blank to keep the configured secret key.</source>
+        <target>Lascia vuoto il campo per mantenere la chiave segreta configurata.</target>
+      </trans-unit>
+      <trans-unit id="settings_configure_denied">
+        <source>You cannot configure these settings.</source>
+        <target>Non sei autorizzato a configurare queste impostazioni.</target>
+      </trans-unit>
+      <trans-unit id="settings_save_denied">
+        <source>You cannot save these settings.</source>
+        <target>Non puoi salvare queste impostazioni.</target>
+      </trans-unit>
+      <trans-unit id="settings_invalid_field">
+        <source>%field% is invalid</source>
+        <target>%field% non ? valido</target>
+      </trans-unit>
+      <trans-unit id="settings_save_start_failed">
+        <source>Settings could not be saved.</source>
+        <target>Impossibile salvare le impostazioni.</target>
+      </trans-unit>
+      <trans-unit id="settings_save_rolled_back">
+        <source>Settings were not saved. Reload this page before retrying.</source>
+        <target>Le impostazioni non sono state salvate. Ricarica questa pagina prima di riprovare.</target>
+      </trans-unit>
     </body>
   </file>
 </xliff>

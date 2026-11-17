@@ -1,0 +1,34 @@
+{
+  "de-DE": {
+    "Leave blank to keep the configured secret key.": "Leer lassen, um den gespeicherten geheimen Schl?ssel beizubehalten.",
+    "You cannot configure these settings.": "Sie d?rfen diese Einstellungen nicht konfigurieren.",
+    "You cannot save these settings.": "Sie k?nnen diese Einstellungen nicht speichern.",
+    "%field% is invalid": "%field% ist ung?ltig",
+    "Settings could not be saved.": "Die Einstellungen konnten nicht gespeichert werden.",
+    "Settings were not saved. Reload this page before retrying.": "Die Einstellungen wurden nicht gespeichert. Laden Sie diese Seite neu, bevor Sie es erneut versuchen."
+  },
+  "es-ES": {
+    "Leave blank to keep the configured secret key.": "Deje el campo vac?o para conservar la clave secreta configurada.",
+    "You cannot configure these settings.": "No tiene permiso para configurar estos ajustes.",
+    "You cannot save these settings.": "No puede guardar estos ajustes.",
+    "%field% is invalid": "%field% no es v?lido",
+    "Settings could not be saved.": "No se han podido guardar los ajustes.",
+    "Settings were not saved. Reload this page before retrying.": "Los ajustes no se han guardado. Vuelva a cargar esta p?gina antes de intentarlo de nuevo."
+  },
+  "fr-FR": {
+    "Leave blank to keep the configured secret key.": "Laissez ce champ vide pour conserver la cl? secr?te configur?e.",
+    "You cannot configure these settings.": "Vous n?avez pas l?autorisation de configurer ces param?tres.",
+    "You cannot save these settings.": "Vous ne pouvez pas enregistrer ces param?tres.",
+    "%field% is invalid": "%field% n?est pas valide",
+    "Settings could not be saved.": "Les param?tres n?ont pas pu ?tre enregistr?s.",
+    "Settings were not saved. Reload this page before retrying.": "Les param?tres n?ont pas ?t? enregistr?s. Rechargez cette page avant de r?essayer."
+  },
+  "it-IT": {
+    "Leave blank to keep the configured secret key.": "Lascia vuoto il campo per mantenere la chiave segreta configurata.",
+    "You cannot configure these settings.": "Non sei autorizzato a configurare queste impostazioni.",
+    "You cannot save these settings.": "Non puoi salvare queste impostazioni.",
+    "%field% is invalid": "%field% non ? valido",
+    "Settings could not be saved.": "Impossibile salvare le impostazioni.",
+    "Settings were not saved. Reload this page before retrying.": "Le impostazioni non sono state salvate. Ricarica questa pagina prima di riprovare."
+  }
+}

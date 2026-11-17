@@ -24,7 +24,7 @@ Install and native upgrade reject unsupported platforms before lifecycle writes.
 
 ## Installation
 
-Build the versioned **pixel_cloudflare_turnstile-1.2.0.zip** with `python tools/build.py`
+Build the versioned **pixel_cloudflare_turnstile-1.2.1.zip** with `python tools/build.py`
 from committed source. The manifest records every packaged file and ZIP SHA-256.
 
 ### Admin
@@ -115,6 +115,21 @@ Use the **Test mode** option in the module configuration to test without real Cl
 | Force interactive challenge| Forces the user to complete an interactive check |
 
 This automatically uses Cloudflare's official test keys, so you don't need to manually change your sitekey and secret key.
+
+## Release 1.2.1
+
+- Translate the six maintained settings messages in German, Spanish, French and
+  Italian, including invalid fields, save failures and secret-key retention help.
+- Keep validation, authorization, transaction handling, routing and provider
+  behavior unchanged. English remains the source fallback for other locales.
+- Verify the error messages through native PrestaShop translation and HTTP form
+  submissions, including a real database failure and rollback. Tests stay outside
+  the runtime ZIP. The exact 1.2.0 package is retained as an upgrade fixture.
+- Requirements remain PrestaShop 9.2.x and PHP 8.5. Translation wording has not had
+  native-speaker review. See [verification](docs/verification.md) for execution,
+  staging and production status; a published package does not imply deployment.
+- MCP assessment: this localization correction adds no agent operation. Keep the
+  existing read-only current-shop status resource unchanged.
 
 ## Release 1.2.0
 

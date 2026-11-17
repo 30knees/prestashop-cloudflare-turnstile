@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 - 2026-11-17
+
+- Translate invalid-field, permission and persistence errors and blank-secret guidance in the four bundled locales.
+- Preserve all settings behavior and existing translation keys; add native catalogue/HTTP regression coverage and the exact 1.2.0 upgrade fixture.
+
 ## 1.2.0 - 2026-11-08
 
 Drops support for PrestaShop 8.x and PHP below 8.5; requires PrestaShop 9.2.x and PHP 8.5.

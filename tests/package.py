@@ -1,7 +1,7 @@
 from pathlib import Path
 import hashlib,json,zipfile
 root=Path(__file__).resolve().parents[1]
-record=json.loads((root/'dist/pixel_cloudflare_turnstile-1.2.0.manifest.json').read_text())
+record=json.loads((root/'dist/pixel_cloudflare_turnstile-1.2.1.manifest.json').read_text())
 path=root/'dist'/record['artifact']
 assert hashlib.sha256(path.read_bytes()).hexdigest()==record['sha256']
 with zipfile.ZipFile(path) as z:

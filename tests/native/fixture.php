@@ -47,10 +47,10 @@ if($action==='extract') {
     $manager=$container->get(PrestaShop\PrestaShop\Core\Module\ModuleManager::class);
     checkFixture($manager->$action($name),'Native '.$action.' failed: '.json_encode($manager->getError($name)));
 } elseif($action==='status') {
-    $module=Module::getInstanceByName($name); $version=$argv[2]??'1.2.0';
+    $module=Module::getInstanceByName($name); $version=$argv[2]??'1.2.1';
     checkFixture($module->version===$version && $db->getValue("SELECT version FROM `"._DB_PREFIX_."module` WHERE name='".$name."'",false)===$version,'Installed/code mismatch');
     foreach(['actionFrontControllerSetMedia','displayCustomerAccountForm','displayNewsletterRegistration','actionNewsletterRegistrationBefore','actionFrontControllerInitBefore'] as $hook) checkFixture($module->isRegisteredInHook($hook),'Missing hook '.$hook);
-    if($version==='1.2.0') {
+    if(version_compare($version,'1.2.0','>=')) {
         $status=$module->getStatus();
         checkFixture($status['installed_version']===$version && count($status['hooks'])===5,'Status mismatch');
         $json=json_encode($status);
