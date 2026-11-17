@@ -1,4 +1,41 @@
-# Turnstile 1.2.0 qualification - 8 November 2026
+# Turnstile qualification
+
+## 1.2.1: settings localization - 17 November 2026
+
+Target remains PrestaShop9.2.x/PHP8.5 only; platform requirements and behavior are
+unchanged. Runtime source c5e051a08c6128622864122415995caabdc9af6e. Exact23-file ZIP
+SHA-256 `845aedbcc496ac79a018a4707e3e6018c4e47239bad6ae1c311505da74c24616`.
+The release translates six settings messages in the four bundled locales and
+routes three previously literal messages through the native translator.
+
+- PHP8.5.12:24 files lint;42 settings,46 components,14 existing guard mutations
+  and platform acceptance/refusal checks pass. No new authorization guard added.
+- Previous exact1.2.0 ZIP:44 localization failures in56 checks; the12 settings
+  preservation/privacy controls pass. Candidate: all56 checks pass, including
+  native catalogue/placeholder matching, translated HTTP validation, token-denial
+  and database-failure rendering. The real write failure rolls back all settings.
+- Fresh disposable PS9.2.0/PHP8.5.12/MariaDB10.11:442 lifecycle/render/preservation
+  assertions, exact1.1.4 and1.2.0 upgrades, enabled/disabled Reset and uninstall;
+  12 native transaction/cache,11 SDK/scope,16 authenticated MCP and123 HTTP checks
+  pass. Mail is disabled and all credentials/settings are synthetic.
+- [CI44049322943](https://github.com/30knees/prestashop-cloudflare-turnstile/actions/runs/44049322943)
+  passes on2fa203c. Downloaded Linux ZIP bytes match the local Windows ZIP exactly.
+  Unsupported PHP refusal and removal of its guard also pass in hosted CI.
+- Hosted staging: native1.2.0-to-1.2.1 upgrade;23 package hashes,15 supplemental
+  files, four settings rows, five hooks, association and surrounding configuration,
+  source and commerce fingerprints preserved. No settings save or staging backup.
+  All28 native localized-message/denied-render checks pass. Both scanners run
+  against14 runtime PHP files; SDK reports are resolved by native staged metadata
+  and status reads, and SQL-identifier backticks are reviewed false positives.
+- MCP assessment: no new agent operation. The existing read-only current-shop
+  status resource is unchanged; local authenticated and staged direct checks pass.
+- Not checked in this run: visual reflow, keyboard/200%zoom (browser access host
+  unavailable), native-speaker wording, public staging MCP transport or real-key
+  Cloudflare challenges. Earlier browser evidence does not verify the new strings.
+- Production: not deployed by this task. Publishing and staging qualification
+  are separate from production delivery. Older dated records below are historical.
+
+## Turnstile 1.2.0 qualification - 8 November 2026
 
 Drops support for PrestaShop 8.x and PHP below 8.5; requires PrestaShop 9.2.x and PHP 8.5.
 

@@ -18,7 +18,10 @@ Drops support for PrestaShop 8.x and PHP below 8.5; requires PrestaShop 9.2.x an
 - Add read-only current-shop MCP status without keys, tokens, provider requests or writes.
 - Add exact package, component, guard mutation, native lifecycle, HTTP and MCP qualification suites.
 
-## Earlier settings contribution (upstream PR 20)
+## Original settings contribution (2 November 2026)
+
+Upstream PR20 was narrowed on17November to validation before saving. The broader
+changes below describe the original contribution and the maintained fork's history.
 
 - Validate every configuration field before saving; reject invalid selection values and malformed input.
 - Report failed configuration writes without a success message and explain partial persistence.
