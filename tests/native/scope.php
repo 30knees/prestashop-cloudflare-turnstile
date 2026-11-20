@@ -27,6 +27,6 @@ $db->delete('module_shop','id_module='.$id.' AND id_shop=1');
 try { refused($adapter,'Warmed module refuses shop disable'); } finally { $db->insert('module_shop',$association); }
 $db->update('module',['active'=>0],'id_module='.$id);
 try { refused($adapter,'Warmed module refuses global disable'); } finally { $db->update('module',['active'=>1],'id_module='.$id); }
-scopeCheck($adapter->read()['installed_version']==='1.2.1','Restored activation readable');
+scopeCheck($adapter->read()['installed_version']===$module->version,'Restored activation readable');
 scopeCheck(hash_file('sha256',_PS_ROOT_DIR_.'/classes/Tools.php')===$before,'Adapter never rewrites core');
 echo "$checks native scope/SDK assertions passed.\n";

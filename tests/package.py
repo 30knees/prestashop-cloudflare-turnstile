@@ -1,7 +1,8 @@
 from pathlib import Path
-import hashlib,json,zipfile
+import hashlib,json,re,zipfile
 root=Path(__file__).resolve().parents[1]
-record=json.loads((root/'dist/pixel_cloudflare_turnstile-1.2.1.manifest.json').read_text())
+version=re.search(r"\$this->version = '([^']+)'",(root/'pixel_cloudflare_turnstile.php').read_text(encoding='utf-8')).group(1)
+record=json.loads((root/f'dist/pixel_cloudflare_turnstile-{version}.manifest.json').read_text())
 path=root/'dist'/record['artifact']
 assert hashlib.sha256(path.read_bytes()).hexdigest()==record['sha256']
 with zipfile.ZipFile(path) as z:

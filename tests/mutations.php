@@ -31,6 +31,12 @@ $cases=PHP_VERSION_ID<80500?[
     ['pixel_cloudflare_turnstile.php','($result[\'success\'] ?? null) !== true','empty($result[\'success\'])','components.php'],
     ['pixel_cloudflare_turnstile.php','strlen($response) > 2048','false','components.php'],
     ['pixel_cloudflare_turnstile.php','curl_getinfo($ch, CURLINFO_HTTP_CODE) !== 200','false','components.php'],
+    // 1.2.2 provider script: head only on protected forms, otherwise once beside the first widget.
+    ['pixel_cloudflare_turnstile.php','if (!$this->canProcess(get_class($this->context->controller))) {','if (false) {','components.php'],
+    ['pixel_cloudflare_turnstile.php','self::$providerScriptLoaded = true;','','components.php'],
+    ['pixel_cloudflare_turnstile.php','$includeScript = !self::$providerScriptLoaded && ','$includeScript = ','components.php'],
+    ['pixel_cloudflare_turnstile.php',' && !empty($variables[\'sitekey\'])','','components.php'],
+    ['pixel_cloudflare_turnstile.php','self::$providerScriptLoaded = self::$providerScriptLoaded || $includeScript;','','components.php'],
 ];
 $checks=0;
 try {

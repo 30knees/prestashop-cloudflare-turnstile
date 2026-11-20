@@ -52,7 +52,12 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public const FORM_PASSWORD = 'password';
     public const FORM_NEWSLETTER = 'newsletter';
 
+    public const PROVIDER_SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+
     protected $templateFile;
+
+    /** True once this request loads the provider script: in the head (setMedia) or next to a widget. */
+    protected static bool $providerScriptLoaded = false;
 
     protected static $validationError;
 
@@ -62,7 +67,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function __construct()
     {
         $this->name = 'pixel_cloudflare_turnstile';
-        $this->version = '1.2.1';
+        $this->version = '1.2.2';
         $this->author = '30knees';
         $this->tab = 'front_office_features';
         $this->need_instance = 0;
@@ -149,7 +154,10 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     /***********/
 
     /**
-     * Adds CSS and JS
+     * Adds CSS on every page and the provider script on pages with a protected form
+     *
+     * The stylesheet stays on every page so that combined (CCC) bundles do not vary by page.
+     * Widgets on other pages (newsletter, custom forms) load the script next to their markup.
      *
      * @return void
      */
@@ -163,9 +171,13 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 'priority'   => 100,
             ]
         );
+        if (!$this->canProcess(get_class($this->context->controller))) {
+            return;
+        }
+        self::$providerScriptLoaded = true;
         $this->context->controller->registerJavascript(
             'cloudflare-turnstile',
-            'https://challenges.cloudflare.com/turnstile/v0/api.js',
+            self::PROVIDER_SCRIPT_URL,
             [
                 'server'     => 'remote',
                 'position'   => 'head',
@@ -509,9 +521,14 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         if (!$isCustom && (!$this->canProcess($className) && $hookName != 'displayNewsletterRegistration')) {
             return '';
         }
+        $variables = $this->getWidgetVariables($hookName, $configuration);
+        // Without a head copy, the first rendered widget of the request carries the provider script.
+        $includeScript = !self::$providerScriptLoaded && !empty($variables['sitekey']);
+        self::$providerScriptLoaded = self::$providerScriptLoaded || $includeScript;
+        $variables['provider_script'] = $includeScript ? self::PROVIDER_SCRIPT_URL : '';
         $template = $this->context->smarty->createTemplate($this->templateFile, null, $this->getDefaultCompileId(), $this->smarty);
         $template->caching = Smarty::CACHING_OFF;
-        $template->assign($this->getWidgetVariables($hookName, $configuration));
+        $template->assign($variables);
         return $template->fetch();
     }
 

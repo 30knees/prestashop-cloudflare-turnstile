@@ -2,9 +2,12 @@
 from pathlib import Path
 import argparse
 import os
+import re
 import subprocess
 import time
 root=Path(__file__).resolve().parents[1]
+version=re.search(r"\$this->version = '([^']+)'",(root/'pixel_cloudflare_turnstile.php').read_text(encoding='utf-8')).group(1)
+candidate=f'/module/dist/pixel_cloudflare_turnstile-{version}.zip'
 p=argparse.ArgumentParser()
 p.add_argument('--project',default='turnstile-ps92-qualification')
 p.add_argument('--compose-override')
@@ -35,20 +38,21 @@ try:
     else: raise RuntimeError('Synthetic shop did not finish installation')
     run('ownership',[docker,'exec',container,'chown','-R','www-data:www-data','/var/www/html/modules','/var/www/html/override','/var/www/html/var'])
     fixture('prepare')
-    fixture('extract','/module/dist/pixel_cloudflare_turnstile-1.2.1.zip')
+    fixture('extract',candidate)
     fixture('install'); fixture('seed'); fixture('snapshot'); fixture('status')
     fixture('reset'); fixture('status'); fixture('preserved')
     fixture('uninstall'); fixture('uninstalled'); fixture('preserved')
     fixture('extract','/module/tests/fixtures/pixel_cloudflare_turnstile-1.1.4.zip')
     fixture('install'); fixture('status','1.1.4'); fixture('snapshot')
-    fixture('extract','/module/dist/pixel_cloudflare_turnstile-1.2.1.zip')
+    fixture('extract',candidate)
     fixture('upgrade'); fixture('status'); fixture('hooks-preserved'); fixture('preserved')
-    # Exercise the exact deployed 1.2.0 package as a separate upgrade source.
-    fixture('uninstall'); fixture('uninstalled')
-    fixture('extract','/module/tests/fixtures/pixel_cloudflare_turnstile-1.2.0.zip')
-    fixture('install'); fixture('status','1.2.0'); fixture('snapshot')
-    fixture('extract','/module/dist/pixel_cloudflare_turnstile-1.2.1.zip')
-    fixture('upgrade'); fixture('status'); fixture('hooks-preserved'); fixture('preserved')
+    # Exercise the exact earlier 1.2.0 and deployed 1.2.1 packages as separate upgrade sources.
+    for source in ['1.2.0','1.2.1']:
+        fixture('uninstall'); fixture('uninstalled')
+        fixture('extract',f'/module/tests/fixtures/pixel_cloudflare_turnstile-{source}.zip')
+        fixture('install'); fixture('status',source); fixture('snapshot')
+        fixture('extract',candidate)
+        fixture('upgrade'); fixture('status'); fixture('hooks-preserved'); fixture('preserved')
     fixture('disable'); fixture('reset'); fixture('status'); fixture('preserved')
     fixture('render')
     php('native-atomic','/module/tests/native/atomic.php')

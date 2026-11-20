@@ -26,7 +26,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pixel_cloudflare_turnstile-1.2.1-qualification
+          name: pixel_cloudflare_turnstile-1.2.2-qualification
           include-hidden-files: true
           path: |
             dist/*

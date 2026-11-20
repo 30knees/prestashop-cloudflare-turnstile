@@ -9,7 +9,10 @@ import urllib.parse
 import urllib.request
 
 BASE='http://localhost:19105'
-OUT=Path(__file__).resolve().parents[1]/'.qualification'
+ROOT=Path(__file__).resolve().parents[1]
+VERSION=re.search(r"\$this->version = '([^']+)'",(ROOT/'pixel_cloudflare_turnstile.php').read_text(encoding='utf-8')).group(1)
+API='https://challenges.cloudflare.com/turnstile/v0/api.js'
+OUT=ROOT/'.qualification'
 OUT.mkdir(exist_ok=True)
 checks=0
 
@@ -86,7 +89,7 @@ def login(client):
     code,page,_,_=client.request(manager)
     configure=next(link for link in Forms(page).links if '/configure/pixel_cloudflare_turnstile' in link)
     code,page,_,url=client.request(configure)
-    check(code==200 and '(1.2.1)' in page,'settings shows installed version')
+    check(code==200 and f'({VERSION})' in page,'settings shows installed version')
     return page,url
 
 
@@ -155,9 +158,39 @@ if __name__ == '__main__':
     check('id="login_form"' in body or code in (401,403),'anonymous write refused')
     unchanged()
     # The real core supplies registration and newsletter hooks; other forms require theme placement.
-    for path in ['/index.php?controller=registration','/']:
-        code,body,_,_=anonymous.request(path)
-        check(code==200 and 'cf-turnstile' in body,'native storefront widget renders: '+path)
-        check('challenges.cloudflare.com/turnstile/v0/api.js' in body,'provider script registered')
-    (OUT/'http-settings.json').write_text(json.dumps({'checks':checks,'native_routes':2,'sessions':2,'secret_in_html':False},indent=2),encoding='utf-8')
+    # 1.2.2: the provider script is in the head only on protected form pages. Any other page that
+    # renders a widget (the theme's newsletter form) carries one copy beside its first widget.
+    pages={'home':'/','product':'/index.php?id_product=1&controller=product','contact':'/index.php?controller=contact',
+           'registration':'/index.php?controller=registration','login':'/index.php?controller=authentication',
+           'password':'/index.php?controller=password'}
+    tag=r'<script\b[^>]*\bsrc="'+re.escape(API)+r'"[^>]*>'
+    def assets(name):
+        code,body,_,_=anonymous.request(pages[name])
+        check(code==200,'storefront page renders: '+name)
+        head,_,page=body.partition('</head>')
+        inline=[match.start() for match in re.finditer(tag,page)]
+        if inline:
+            check(page.count(f'<script src="{API}" async defer></script>')==1,'beside-widget script uses async defer: '+name)
+            check(-1<page.find('class="cf-turnstile"')<inline[0],'widget container precedes its script: '+name)
+        for match in re.finditer(tag,head): check(' async' in match.group(0),'head script stays async: '+name)
+        return len(re.findall(tag,head)),len(inline),page.count('class="cf-turnstile"')>0
+    every=['contact','login','register','password','newsletter']
+    matrix=[
+        (every,{'home':(0,1,True),'product':(0,1,True),'contact':(1,0,True),'registration':(1,0,True),'login':(1,0,True),'password':(1,0,True)}),
+        (['contact','register'],{'home':(0,0,False),'product':(0,0,False),'contact':(1,0,False),'registration':(1,0,True),'login':(0,0,False),'password':(0,0,False)}),
+        (['newsletter'],{'home':(0,1,True),'product':(0,1,True),'contact':(0,1,True),'registration':(0,1,True),'login':(0,1,True),'password':(0,1,True)}),
+    ]
+    observed={}
+    for forms,expected in matrix:
+        code,body,_,_=client.request(canonical,current()['fields']|submit|{'CLOUDFLARE_TURNSTILE_FORMS[]':forms})
+        check(code==200 and 'Settings updated' in body,'forms saved: '+','.join(forms))
+        check(current()['fields']['CLOUDFLARE_TURNSTILE_FORMS[]']==forms,'forms survive reload: '+','.join(forms))
+        for name,want in expected.items():
+            seen=assets(name); observed[','.join(forms)+' '+name]=seen
+            check(seen==want,f'provider script placement {forms} {name}: head/beside/widget {seen} != {want}')
+    code,body,_,_=client.request(canonical,current()['fields']|original|submit)
+    check(code==200 and 'Settings updated' in body,'restore synthetic settings after storefront matrix')
+    unchanged()
+    (OUT/'http-assets.json').write_text(json.dumps(observed,indent=2),encoding='utf-8')
+    (OUT/'http-settings.json').write_text(json.dumps({'checks':checks,'native_routes':2,'sessions':2,'secret_in_html':False,'storefront_pages':len(observed)},indent=2),encoding='utf-8')
     print(f'{checks} native HTTP settings/storefront checks passed.')
