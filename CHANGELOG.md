@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.2 - 2026-11-20
+
+- Load Cloudflare's `api.js` only on pages that can show a widget. Pages whose controller
+  processes a protected form (contact, registration, login, password, as configured) keep it
+  in the head; any other page that renders a widget (newsletter form, custom forms such as
+  SimpleWithdrawal) gets one `async defer` copy beside its first widget. Pages without a
+  widget no longer download it (PageSpeed, 20 November: 28 KB on the home page).
+- Keep the module stylesheet on every page so combined (CCC) bundles do not vary by page.
+- Add component, guard-mutation, install hook-set and storefront HTTP checks for script
+  placement; add the exact deployed 1.2.1 package as an upgrade source.
+
 ## 1.2.1 - 2026-11-17
 
 Production native upgrade verified at 09:11 UTC: 23 package hashes, preserved

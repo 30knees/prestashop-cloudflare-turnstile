@@ -1,5 +1,66 @@
 # Turnstile qualification
 
+## 1.2.2: provider script only where a widget renders - 20 November 2026
+
+Target remains PrestaShop 9.2.x / PHP 8.5 only. Runtime source
+2095ed7c5e5aee00d0e0326db5a4c513e6235a0d; exact 23-file ZIP SHA-256
+`d388bdf8f74ed77c51393c93aa7e111ccbfd54fedb64ae3af23b07658637281c`. Only the entry point
+and the widget template differ from 1.2.1. No upgrade script, settings, translation or MCP
+change.
+
+- Change: `hookActionFrontControllerSetMedia()` keeps the stylesheet on every page and
+  registers `api.js` (remote, head, async) only when `canProcess()` accepts the current
+  controller. `renderWidget()` assigns `provider_script` to the first widget of a request
+  that has no head copy, and the template prints
+  `<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>`
+  inside the widget wrapper, after the container. A static flag shared by both paths keeps it
+  to one copy per request; a missing sitekey renders neither widget nor script.
+- Cloudflare's [client-side rendering guide](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/)
+  places `api.js` in the head or before `</body>`; implicit rendering scans for `cf-turnstile`
+  elements when the script loads and is meant for forms present at page load. The guide does
+  not discuss a script inside the body; here the container is always parsed before the script
+  can run, which is the property both documented placements rely on. Dynamically inserted
+  widgets need explicit rendering per the guide; a search of the theme and workspace modules
+  found no `turnstile.render`/`reset`/`execute` caller and no AJAX-inserted widget.
+  SimpleWithdrawal's custom widget is the one consumer outside the protected controllers.
+- PHP 8.5.12 (Docker `php:8.5-cli`): 24 files lint; 42 settings cases; 108 component checks
+  (46 earlier plus placement for eight controllers in three form configurations, once per
+  request, contact/registration head copy, custom form page, disabled newsletter, missing
+  sitekey, checkout); runtime gates for 9.2.0/9.2.99 accepted and 9.1.0/9.3.0 refused,
+  plus the install hook set; 19 guard mutations (5 new for script placement) rejected.
+  PHP 8.2.35: unsupported runtime refused and its guard mutation rejected. Exact package
+  manifest: 23 files.
+- Disposable PS 9.2.0 / PHP 8.5.12 shop (existing test shop): exact 1.2.1 install, seed,
+  native upgrade to the exact 1.2.2 ZIP, hooks and preservation, render (179 fixture
+  assertions); `tests/http_ps92.py` 201 checks including an 18-case storefront matrix
+  (home, product, contact, registration, login, password in three form configurations):
+  head copy only on protected form pages, one async/defer copy after the first widget
+  elsewhere, none where no widget renders. Teardown: uninstall and preservation pass.
+- Headless Chrome on that shop (Cloudflare's public always-pass test sitekey): the widget
+  rendered on home and product with the script beside it and on contact and registration
+  with the head copy; each container gained the provider-created `cf-turnstile-response`
+  input, absent from the server HTML. No dummy token was issued in headless mode for either
+  placement, so challenge completion is not verified.
+- [Hosted CI 44746147220](https://github.com/30knees/prestashop-cloudflare-turnstile/actions/runs/44746147220)
+  passes on 2095ed7: static suites, fresh native lifecycle with exact 1.1.4, 1.2.0 and 1.2.1
+  upgrade sources (576 fixture assertions), 12 transaction, 11 scope, 16 authenticated MCP,
+  201 HTTP and 56 localization checks. The CI ZIP is byte-identical to the local ZIP.
+- Hosted staging (PS 9.2.1 / PHP 8.5.13, forms contact, register, newsletter): native
+  1.2.1-to-1.2.2 upgrade under the staging lock; 23 package hashes, 15 supplemental files,
+  four settings rows, five hooks, shop association, policy (including CCC and the
+  SimpleWithdrawal Turnstile switch), neighboring modules, theme, design module, overrides,
+  core files, robots.txt and commerce counts keep their before fingerprints. CLI renders of
+  six German pages (CCC off in memory only): before, `api.js` was in the head of all six;
+  after, the home, login and product pages load none and show no widget, contact and
+  registration keep one head copy with their widget, and the withdrawal form carries one
+  async/defer copy after its widget. The stylesheet stays on all six. Native SDK status
+  reports 1.2.2. Both scanners report the same findings as 1.2.1 (SDK classes resolved by
+  the staged SDK read; three SQL-identifier backticks).
+- MCP: this release changes no agent-facing surface; `turnstile://status` is unchanged.
+- Not checked: a browser view on staging (Basic auth), real-key challenge completion,
+  PageSpeed re-run, production. A theme override of the widget template must keep the
+  `provider_script` block.
+
 ## 1.2.1: settings localization - 17 November 2026
 
 Target remains PrestaShop9.2.x/PHP8.5 only; platform requirements and behavior are

@@ -24,7 +24,7 @@ Install and native upgrade reject unsupported platforms before lifecycle writes.
 
 ## Installation
 
-Build the versioned **pixel_cloudflare_turnstile-1.2.1.zip** with `python tools/build.py`
+Build the versioned **pixel_cloudflare_turnstile-1.2.2.zip** with `python tools/build.py`
 from committed source. The manifest records every packaged file and ZIP SHA-256.
 
 ### Admin
@@ -63,6 +63,10 @@ Override the default action name by adding an action option:
 ```html
 {widget name='pixel_cloudflare_turnstile' action='my-form'}
 ```
+
+The widget loads Cloudflare's script itself on pages that do not already load it in the
+head (1.2.2). A theme override of `pixel_cloudflare_turnstile.tpl` must keep the
+`provider_script` block, or widgets outside the protected form pages stay empty.
 
 ### Forms
 
@@ -115,6 +119,38 @@ Use the **Test mode** option in the module configuration to test without real Cl
 | Force interactive challenge| Forces the user to complete an interactive check |
 
 This automatically uses Cloudflare's official test keys, so you don't need to manually change your sitekey and secret key.
+
+## Release 1.2.2
+
+PageSpeed follow-up (20 November 2026): Cloudflare's `api.js` (28 KB, mostly unused) was
+registered on every storefront page, although the home page shows no widget.
+[Verification](docs/verification.md).
+
+- Changes: the provider script is registered in the head only where the current controller
+  processes a protected form (the forms selected under **Forms to validate**: contact,
+  registration, login, reset password). Any other page that renders a widget (the newsletter
+  form, a custom form such as SimpleWithdrawal's) carries one
+  `<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer>` beside
+  its first widget, once per request. Turnstile's implicit rendering scans for `.cf-turnstile`
+  containers when the script runs, and the container always precedes this script in the
+  document. The stylesheet stays on every page (CCC bundles stay the same on all pages).
+  Validation, settings, translations and the MCP resource are unchanged.
+- Requirements: PrestaShop 9.2.x and PHP 8.5 (unchanged). No upgrade script; the native
+  upgrade only records the new version.
+- Verification: component checks for all controllers in three form configurations, five new
+  guard mutations, a storefront HTTP matrix (18 page/configuration cases) on a disposable
+  PrestaShop 9.2.0 shop, exact 1.1.4/1.2.0/1.2.1 upgrade sources in hosted CI, a headless
+  Chrome check that the widget still renders with the script beside it, and the staging
+  upgrade with before/after fingerprints and German page renders. Details in
+  [verification](docs/verification.md).
+- Known limitations: a widget inserted later by JavaScript on a page without a protected form
+  gets no script (Cloudflare recommends explicit rendering for dynamic content; no such
+  insertion exists in the shop's theme or modules). A theme override of the widget template
+  must keep the `provider_script` block. Completion of a real or dummy challenge in a browser
+  was not observed in this release (headless Chrome rendered the widget but issued no token
+  for either script placement).
+- MCP: this release changes no agent-facing surface; the read-only `turnstile://status`
+  resource is unchanged.
 
 ## Release 1.2.1
 
