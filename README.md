@@ -122,6 +122,9 @@ This automatically uses Cloudflare's official test keys, so you don't need to ma
 
 ## Release 1.2.2
 
+Deployed to production on 20 November 2026 at 20:01 UTC; package hashes, settings and hooks
+preserved, and the script now appears only on pages with a widget.
+
 PageSpeed follow-up (20 November 2026): Cloudflare's `api.js` (28 KB, mostly unused) was
 registered on every storefront page, although the home page shows no widget.
 [Verification](docs/verification.md).

@@ -57,9 +57,17 @@ change.
   reports 1.2.2. Both scanners report the same findings as 1.2.1 (SDK classes resolved by
   the staged SDK read; three SQL-identifier backticks).
 - MCP: this release changes no agent-facing surface; `turnstile://status` is unchanged.
-- Not checked: a browser view on staging (Basic auth), real-key challenge completion,
-  PageSpeed re-run, production. A theme override of the widget template must keep the
-  `provider_script` block.
+- Not checked: a browser view on staging (Basic auth), real-key challenge completion.
+  A theme override of the widget template must keep the `provider_script` block.
+- Production: owner-authorized native 1.2.1-to-1.2.2 upgrade on 20 November at 20:01 UTC
+  (PrestaShop 9.2.1 / PHP 8.5.13) after a preflight against the exact 1.2.1 files and a
+  scoped private recovery set on the host. Two of 23 files changed; all 23 package hashes,
+  15 supplemental files, settings, hooks, shop association, policy and neighboring module
+  versions verified; the native SDK status reports 1.2.2. Public GETs: home, category and
+  login carry no `api.js` and no widget (before: `api.js` on the home page); contact and
+  registration carry one head copy plus the widget; the custom withdrawal form carries one
+  `async defer` copy plus its widget; the stylesheet matches the release manifest. No form
+  was submitted and no challenge completed.
 
 ## 1.2.1: settings localization - 17 November 2026
 

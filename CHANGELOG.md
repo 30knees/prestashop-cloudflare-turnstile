@@ -11,6 +11,9 @@
 - Add component, guard-mutation, install hook-set and storefront HTTP checks for script
   placement; add the exact deployed 1.2.1 package as an upgrade source.
 
+Production native upgrade verified at 20:01 UTC: 23 package hashes, preserved settings/hooks,
+script only on pages with a widget.
+
 ## 1.2.1 - 2026-11-17
 
 Production native upgrade verified at 09:11 UTC: 23 package hashes, preserved
